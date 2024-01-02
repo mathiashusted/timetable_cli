@@ -12,33 +12,41 @@ mod utils;
 mod render;
 
 const TICK_RATE: u64 = 30; // Refresh every x milliseconds
+const PROCESS_TICK_RATE : u64 = 30; // Refresh rate of our "backend", multiply with TICK_RATE (i.e. refresh every x cycles)
 
 
 
-async fn master_loop(data_refresh_rate: i32, url: String) {
+async fn master_loop(data_refresh_rate: u64, url: String) {
     enable_raw_mode().unwrap();
     stdout().execute(EnterAlternateScreen).unwrap();
 
     let mut terminal = ratatui::Terminal::new(CrosstermBackend::new(stdout())).unwrap();
 
-    let mut data_refresh_tick = 0; // Iterator for when to update data
+    let mut data_refresh_tick: u64 = 0; // Iterator for when to update data
+    let mut process_refresh_tick: u64 = 0;
 
     // Our initial request to fetch the data
     let mut data = utils::utils::make_request(url.to_string()).await;
-    let mut timetable = utils::utils::process_data(&data).await;
+    let mut timetable = utils::utils::process_tables(&data).await;
+    let metadata = utils::utils::process_metadata(&data);
 
     let mut should_quit = false;
 
     while !should_quit {
-        if event::poll(std::time::Duration::from_millis(TICK_RATE)).unwrap() {
-            should_quit = handle_events().unwrap();
-            if data_refresh_tick == data_refresh_rate {
+        should_quit = handle_events().unwrap(); // Will time out for TICK_RATE
+
+        if process_refresh_tick == PROCESS_TICK_RATE {
+            if data_refresh_tick >= data_refresh_rate {
                 data = utils::utils::make_request(url.to_string()).await;
-                timetable = utils::utils::process_data(&data).await;
                 data_refresh_tick = 0;
             }
+            timetable = utils::utils::process_tables(&data).await;
+            process_refresh_tick = 0;
         }
-        render::render::draw(&mut terminal, &timetable);
+
+        data_refresh_tick += 1;
+        process_refresh_tick += 1;
+        render::render::draw(&mut terminal, &timetable, &metadata);
     }
 
     stdout().execute(LeaveAlternateScreen).unwrap();
@@ -46,9 +54,11 @@ async fn master_loop(data_refresh_rate: i32, url: String) {
 }
 
 fn handle_events() -> io::Result<bool> {
-    if let Event::Key(key) = event::read()? {
-        if key.kind == event::KeyEventKind::Press && key.code == KeyCode::Char('q') {
-            return Ok(true)
+    if event::poll(std::time::Duration::from_millis(TICK_RATE)).unwrap() {
+        if let Event::Key(key) = event::read()? {
+            if key.kind == event::KeyEventKind::Press && key.code == KeyCode::Char('q') {
+                return Ok(true)
+            }
         }
     }
     Ok(false)

@@ -10,7 +10,7 @@ pub mod render {
     //     Settings,
     // }
 
-    pub fn gui(rect: &mut Frame, timetable: &Vec<Row<'_>>) {
+    pub fn gui(rect: &mut Frame, timetable: &Vec<Row<'_>>, metadata: &Vec<String>) {
         // Divide our vertical layout into chunks
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -24,7 +24,7 @@ pub mod render {
             .split(rect.size());
 
 
-        let header = Paragraph::new("Titlee")
+        let header = Paragraph::new(metadata[0].to_string())
             .style(Style::default().fg(Color::Yellow))
             .alignment(Alignment::Center)
             .block(
@@ -37,9 +37,9 @@ pub mod render {
 
 
         let widths = [
-            Constraint::Length(10),
-            Constraint::Length(60),
-            Constraint::Length(30),
+            Constraint::Percentage(10),
+            Constraint::Percentage(60),
+            Constraint::Percentage(30),
         ];
         let table = Table::new(timetable.clone(), widths)
             // ...and they can be separated by a fixed spacing.
@@ -63,10 +63,10 @@ pub mod render {
     }
 
 
-    pub fn draw(terminal: &mut ratatui::prelude::Terminal<CrosstermBackend<io::Stdout>>, timetable: &Vec<Row<'_>>) {
+    pub fn draw(terminal: &mut ratatui::prelude::Terminal<CrosstermBackend<io::Stdout>>, timetable: &Vec<Row<'_>>, metadata: &Vec<String>) {
         // Draw our UI onto the terminal
         terminal.draw(|rect| {
-            gui(rect, timetable);
+            gui(rect, timetable, metadata);
         }).unwrap();
     }
 }
