@@ -11,8 +11,7 @@ use ratatui::prelude::CrosstermBackend;
 mod utils;
 mod render;
 
-const TICK_RATE: u64 = 30; // Refresh every x milliseconds
-const PROCESS_TICK_RATE : u64 = 30; // Refresh rate of our "backend", multiply with TICK_RATE (i.e. refresh every x cycles)
+const TICK_RATE: u64 = 1000; // Refresh screen every x milliseconds
 
 
 
@@ -23,11 +22,10 @@ async fn master_loop(data_refresh_rate: u64, url: String) {
     let mut terminal = ratatui::Terminal::new(CrosstermBackend::new(stdout())).unwrap();
 
     let mut data_refresh_tick: u64 = 0; // Iterator for when to update data
-    let mut process_refresh_tick: u64 = 0;
 
     // Our initial request to fetch the data
     let mut data = utils::utils::make_request(url.to_string()).await;
-    let mut timetable = utils::utils::process_tables(&data).await;
+    let mut timetable;
     let metadata = utils::utils::process_metadata(&data);
 
     let mut should_quit = false;
@@ -35,17 +33,13 @@ async fn master_loop(data_refresh_rate: u64, url: String) {
     while !should_quit {
         should_quit = handle_events().unwrap(); // Will time out for TICK_RATE
 
-        if process_refresh_tick == PROCESS_TICK_RATE {
-            if data_refresh_tick >= data_refresh_rate {
-                data = utils::utils::make_request(url.to_string()).await;
-                data_refresh_tick = 0;
-            }
-            timetable = utils::utils::process_tables(&data).await;
-            process_refresh_tick = 0;
+        if data_refresh_tick == data_refresh_rate {
+            data = utils::utils::make_request(url.to_string()).await;
+            data_refresh_tick = 0;
         }
+        timetable = utils::utils::process_tables(&data).await;
 
         data_refresh_tick += 1;
-        process_refresh_tick += 1;
         render::render::draw(&mut terminal, &timetable, &metadata);
     }
 
