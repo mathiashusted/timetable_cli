@@ -1,26 +1,25 @@
-use serde_json::Value;
-use tui::{backend::TermionBackend, Terminal};
-use std::{io::{stdin, Read, stdout, Write}, time::Duration};
-use termion::{async_stdin, raw::{IntoRawMode, RawTerminal}};
+// use serde_json::Value;
+use std::{io, io::stdout};
+use crossterm::{
+    event::{self, Event, KeyCode},
+    ExecutableCommand,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen}
+};
+use ratatui::prelude::CrosstermBackend;
 
 
 mod utils;
 mod render;
 
-const TICK_RATE: u64 = 50; // Refresh every x milliseconds
+const TICK_RATE: u64 = 30; // Refresh every x milliseconds
 
 
 
+async fn master_loop(data_refresh_rate: i32, url: String) {
+    enable_raw_mode().unwrap();
+    stdout().execute(EnterAlternateScreen).unwrap();
 
-async fn master_loop(refresh_rate: i32, url: String) {
-
-    let stdout = std::io::stdout().into_raw_mode().unwrap();
-
-    let backend = TermionBackend::new(stdout);
-    let mut terminal = tui::Terminal::new(backend).unwrap();
-
-    terminal.clear().unwrap();
-    let mut stdin = async_stdin().bytes();
+    let mut terminal = ratatui::Terminal::new(CrosstermBackend::new(stdout())).unwrap();
 
     let mut data_refresh_tick = 0; // Iterator for when to update data
 
@@ -28,31 +27,36 @@ async fn master_loop(refresh_rate: i32, url: String) {
     let mut data = utils::utils::make_request(url.to_string()).await;
     let mut timetable = utils::utils::process_data(&data).await;
 
-    loop {
-        let b = stdin.next();
-        if let Some(Ok(b'q')) = b {
-            break;
-        }
+    let mut should_quit = false;
 
-        // Check if it's time to update our data
-        if data_refresh_tick == refresh_rate {
-            data = utils::utils::make_request(url.to_string()).await;
-            timetable = utils::utils::process_data(&data).await;
-            data_refresh_tick = 0;
+    while !should_quit {
+        if event::poll(std::time::Duration::from_millis(TICK_RATE)).unwrap() {
+            should_quit = handle_events().unwrap();
+            if data_refresh_tick == data_refresh_rate {
+                data = utils::utils::make_request(url.to_string()).await;
+                timetable = utils::utils::process_data(&data).await;
+                data_refresh_tick = 0;
+            }
         }
-        // If we aren't given any different instructions, draw our frame
-        render::render::draw(&mut terminal, &timetable).await;
-
-        data_refresh_tick += 1;
-        // Wait until tick rate has passed
-        std::thread::sleep(Duration::from_millis(TICK_RATE));
+        render::render::draw(&mut terminal, &timetable);
     }
+
+    stdout().execute(LeaveAlternateScreen).unwrap();
+    disable_raw_mode().unwrap();
 }
 
-#[tokio::main]
-async fn main() {
-    println!("Starting...");
+fn handle_events() -> io::Result<bool> {
+    if let Event::Key(key) = event::read()? {
+        if key.kind == event::KeyEventKind::Press && key.code == KeyCode::Char('q') {
+            return Ok(true)
+        }
+    }
+    Ok(false)
+}
 
+
+#[tokio::main]
+async fn main() -> io::Result<()> {
     if let Ok(config) = utils::utils::read_config().await {
         let url = format!(
             "https://{}/stops/{}/departures?duration={}&linesOfStops=false&remarks=true&language=en",
@@ -65,6 +69,6 @@ async fn main() {
     } else {
         eprintln!("Error reading config file!");
     }
-
+    Ok(())
 
 }

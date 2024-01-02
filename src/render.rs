@@ -1,43 +1,72 @@
 pub mod render {
-    use tui::{backend::TermionBackend, Terminal};
-    use termion::raw::RawTerminal;
+    use std::io;
 
-    use tui::widgets::Borders;
-    use tui::widgets::Paragraph;
-    use tui::style::Color;
-    use tui::layout::Alignment;
-    use tui::style::Style;
-    use tui::layout::Constraint;
-    use tui::layout::Layout;
-    use tui::layout::Direction;
-    use tui::widgets::Block;
-    use tui::widgets::BorderType;
-    use tui::widgets::Row;
-    use tui::widgets::Table;
+    use ratatui::prelude::*;
+    use ratatui::widgets::*;
 
-    #[derive(Clone, Copy, Debug)]
-    pub enum MenuItem {
-        Timetable,
-        Settings,
+    // #[derive(Clone, Copy, Debug)]
+    // pub enum MenuItem {
+    //     Timetable,
+    //     Settings,
+    // }
+
+    pub fn gui(rect: &mut Frame, timetable: &Vec<Row<'_>>) {
+        // Divide our vertical layout into chunks
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(
+                [
+                    Constraint::Percentage(10), // Header (Station info, time)
+                    Constraint::Percentage(90), // Body (timetable itself)
+                ]
+                .as_ref()
+            )
+            .split(rect.size());
+
+
+        let header = Paragraph::new("Titlee")
+            .style(Style::default().fg(Color::Yellow))
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .style(Style::default().fg(Color::Green))
+                    .border_type(BorderType::Plain)
+            );
+        rect.render_widget(header, chunks[0]);
+
+
+        let widths = [
+            Constraint::Length(10),
+            Constraint::Length(60),
+            Constraint::Length(30),
+        ];
+        let table = Table::new(timetable.clone(), widths)
+            // ...and they can be separated by a fixed spacing.
+            .column_spacing(1)
+            // You can set the style of the entire Table.
+            .style(Style::new().blue())
+            // It has an optional header, which is simply a Row always visible at the top.
+            .header(
+                Row::new(vec!["Line", "Destination", "Departure"])
+                    .style(Style::new().bold().fg(Color::Red))
+                    // To add space between the header and the rest of the rows, specify the margin
+                    .bottom_margin(1),
+            )
+            // As any other widget, a Table can be wrapped in a Block.
+            .block(Block::default().title("Table"))
+            // The selected row and its content can also be styled.
+            .highlight_style(Style::new().reversed())
+            // ...and potentially show a symbol in front of the selection.
+            .highlight_symbol(">>");
+        rect.render_widget(table, chunks[1]);
     }
 
 
-    pub async fn draw(terminal: &mut Terminal<TermionBackend<RawTerminal<std::io::Stdout>>>, timetable: &Vec<Row<'_>>) {
-        let tableRows = timetable;
-
-
+    pub fn draw(terminal: &mut ratatui::prelude::Terminal<CrosstermBackend<io::Stdout>>, timetable: &Vec<Row<'_>>) {
         // Draw our UI onto the terminal
         terminal.draw(|rect| {
-            let size = rect.size();
-            let table = Table::new(tableRows.clone())
-            .header(Row::new(vec!["Line", "Destination", "Departure"])
-                    .style(tui::style::Style::default().fg(tui::style::Color::Red).add_modifier(tui::style::Modifier::BOLD)))
-            //.block(Block::default().title("Scrollable Table"))
-            .widths(&[Constraint::Percentage(33), Constraint::Percentage(33), Constraint::Percentage(33)])
-            .column_spacing(1)
-            .highlight_style(tui::style::Style::default().fg(tui::style::Color::Magenta).add_modifier(tui::style::Modifier::BOLD))
-            .highlight_symbol(">>");
-        rect.render_widget(table, size);
+            gui(rect, timetable);
         }).unwrap();
     }
 }

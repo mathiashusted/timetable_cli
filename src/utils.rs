@@ -4,7 +4,7 @@ pub mod utils {
     use serde_json::Value;
     use std::fs;
     
-    use tui::widgets::Row;
+    use ratatui::widgets::Row;
 
     const CONFIG_PATH: &str = "config.json";
 
@@ -70,9 +70,8 @@ pub mod utils {
                 table_rows.push(Row::new(vec![line.to_string(), destination.to_string(), departure_time.to_string()]));
             }
         }
-
-
-        
         table_rows
     }
+
+
 }
