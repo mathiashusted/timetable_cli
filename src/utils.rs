@@ -1,4 +1,5 @@
 pub mod utils {
+    use ratatui::style::Stylize;
     use reqwest;
     use serde::Deserialize;
     use serde_json::Value;
@@ -6,6 +7,9 @@ pub mod utils {
     use chrono::prelude::*;
     
     use ratatui::widgets::Row;
+    use ratatui::widgets::Cell;
+    use ratatui::prelude::Style;
+    use ratatui::prelude::Color;
 
     const CONFIG_PATH: &str = "config.json";
 
@@ -68,39 +72,51 @@ pub mod utils {
                 let line = element.get("line")
                     .and_then(|val| val.get("name")).unwrap();
                 let departure_time = element.get("when").unwrap();
-                if departure_time.is_null() {
-                    table_rows.push(Row::new(vec![line.to_string(), destination.to_string(), "CANCELLED".to_string()]));
+                let planned_departure_time = element.get("plannedWhen").unwrap();
+                if departure_time.is_null() || planned_departure_time.is_null() {
+                    table_rows.push(Row::new(vec![line.to_string(), destination.to_string(), "CANCELLED".to_string(), "".to_string()]));
                 }
                 else {
-                    let wait_and_delay = process_delay(departure_time);
-                    table_rows.push(Row::new(vec![line.to_string(), destination.to_string(), wait_and_delay.to_string()]));
+                    let wait_and_delay = process_delay(departure_time, planned_departure_time);
+                    let wait_and_delay_cell = if wait_and_delay.1 == 0 {
+                        Cell::from("(=)").style(Style::new().fg(Color::LightGreen))
+                    } else if wait_and_delay.1 > 0 {
+                        Cell::from(wait_and_delay.1.to_string() + "\"").style(Style::new().fg(Color::Red))
+                    } else {
+                        Cell::from(wait_and_delay.1.to_string() + "\"").style(Style::new().fg(Color::Yellow))
+                    };
+                    table_rows.push(Row::new(vec![
+                        Cell::from(line.to_string()).style(Style::new().bold()),
+                        Cell::from(destination.to_string()),
+                        Cell::from(wait_and_delay.0.to_string() + "\""),
+                        wait_and_delay_cell
+                    ]));
                 }
             }
         }
         table_rows
     }
 
-    pub fn process_metadata(data: &Value) -> Vec<String> {
-        let mut output: Vec<String> = vec![];
-
+    pub fn process_metadata(data: &Value) -> String {
         let departures = data.get("departures").unwrap();
 
         if let Some(departures_array) = departures.as_array() {
             let stop_name = departures_array[0].get("stop")
                 .and_then(|val| val.get("name")).unwrap();
-            output.push(stop_name.to_string()); // Position 0 in array: Name of the stop
+            return stop_name.to_string(); // Position 0 in array: Name of the stop
         }
 
-        output
+        String::from("STATION NAME NOT FOUND") // In case name couldn't be found
     }
 
-    pub fn process_delay(actual_departure: &Value) -> i32 {
+    pub fn process_delay(actual_departure: &Value, planned_departure: &Value) -> (i32, i32) {
         let date_format = "%Y-%m-%dT%H:%M:%S%z";
         let parsed_departure_time = NaiveDateTime::parse_from_str(actual_departure.as_str().unwrap(), date_format).unwrap();
         let parsed_time_processed = Local.from_local_datetime(&parsed_departure_time).unwrap();
+        let parsed_planned = NaiveDateTime::parse_from_str(planned_departure.as_str().unwrap(), date_format).unwrap();
         let difference = parsed_time_processed - Local::now();
-
-        difference.num_minutes() as i32
+        let delay = parsed_departure_time - parsed_planned;
+        (difference.num_minutes() as i32, delay.num_minutes() as i32)
     }
 
 }

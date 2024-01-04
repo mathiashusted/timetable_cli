@@ -1,4 +1,3 @@
-// use serde_json::Value;
 use std::{io, io::stdout};
 use crossterm::{
     event::{self, Event, KeyCode},
