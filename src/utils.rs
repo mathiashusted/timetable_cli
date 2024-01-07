@@ -90,7 +90,7 @@ pub mod utils {
                 }
             }
         } else {
-            table_rows.push(Row::new(vec!["".to_string(), "Connection lost, attempting to reconnect".to_string()]));
+            table_rows.push(Row::new(vec!["".to_string(), "Can't parse the data, attempting again...".to_string()]));
         }
         table_rows
     }
