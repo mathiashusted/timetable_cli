@@ -64,9 +64,7 @@ pub mod utils {
 
         let mut table_rows: Vec<Row<'_>> = vec![];
 
-        let departures = data.get("departures").unwrap();
-
-        if let Some(departures_array) = departures.as_array() {
+        if let Some(departures_array) = data.get("departures").and_then(|val| val.as_array()) {
             for element in departures_array {
                 let destination = element.get("direction").unwrap();
                 let line = element.get("line")
@@ -93,20 +91,21 @@ pub mod utils {
                     ]));
                 }
             }
+        } else {
+            table_rows.push(Row::new(vec!["Connection lost".to_string()]));
         }
         table_rows
     }
 
     pub fn process_metadata(data: &Value) -> String {
-        let departures = data.get("departures").unwrap();
 
-        if let Some(departures_array) = departures.as_array() {
+        if let Some(departures_array) = data.get("departures").and_then(|val| val.as_array()) {
             let stop_name = departures_array[0].get("stop")
                 .and_then(|val| val.get("name")).unwrap();
             return stop_name.to_string(); // Position 0 in array: Name of the stop
         }
 
-        String::from("STATION NAME NOT FOUND") // In case name couldn't be found
+        String::from("STATION NAME NOT FOUND") // Default behavior in case name couldn't be found
     }
 
     pub fn process_delay(actual_departure: &Value, planned_departure: &Value) -> (i32, i32) {
