@@ -49,12 +49,10 @@ pub mod utils {
             Ok(response) => match response.text().await {
                 Ok(body) => serde_json::from_str(body.as_str()).unwrap(),
                 Err(err) => {
-                    eprintln!("Error making the request: {}", err);
                     return Value::Null;
                 },
             },
             Err(err) => {
-                eprintln!("Error making the request: {}", err);
                 return Value::Null;
             }
         }
@@ -92,7 +90,7 @@ pub mod utils {
                 }
             }
         } else {
-            table_rows.push(Row::new(vec!["Connection lost".to_string()]));
+            table_rows.push(Row::new(vec!["".to_string(), "Connection lost, attempting to reconnect".to_string()]));
         }
         table_rows
     }
