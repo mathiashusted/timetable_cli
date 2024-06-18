@@ -14,7 +14,7 @@ const TICK_RATE: u64 = 1000; // Refresh screen every x milliseconds
 
 
 
-async fn master_loop(data_refresh_rate: u64, url: String) {
+async fn master_loop(data_refresh_rate: u64, url: String, lines: Vec<String>, show_cancelled: bool) {
     enable_raw_mode().unwrap();
     stdout().execute(EnterAlternateScreen).unwrap();
 
@@ -36,7 +36,7 @@ async fn master_loop(data_refresh_rate: u64, url: String) {
             data = utils::utils::make_request(url.to_string()).await;
             data_refresh_tick = 0;
         }
-        timetable = utils::utils::process_tables(&data).await;
+        timetable = utils::utils::process_tables(&data, &lines, show_cancelled).await;
 
         data_refresh_tick += 1;
         render::render::draw(&mut terminal, &timetable, &metadata);
@@ -68,7 +68,7 @@ async fn main() -> io::Result<()> {
             config.duration
         );
 
-        tokio::spawn(master_loop(config.refresh_rate, url)).await.unwrap();
+        tokio::spawn(master_loop(config.refresh_rate, url, config.lines, config.show_cancelled)).await.unwrap();
     } else {
         eprintln!("Error reading config file!");
     }

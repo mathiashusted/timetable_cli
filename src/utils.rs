@@ -19,6 +19,8 @@ pub mod utils {
         pub station_id: i32,
         pub duration: i32,
         pub refresh_rate: u64,
+        pub lines: Vec<String>,
+        pub show_cancelled: bool
     }
 
 
@@ -49,45 +51,54 @@ pub mod utils {
             Ok(response) => match response.text().await {
                 Ok(body) => serde_json::from_str(body.as_str()).unwrap(),
                 Err(err) => {
+                    eprintln!("Error Processing the response from the HTTP request: {}", err);
                     return Value::Null;
                 },
             },
             Err(err) => {
+                eprintln!("Error making the HTTP request: {}", err);
                 return Value::Null;
             }
         }
     }
 
-    pub async fn process_tables(data: &Value) -> Vec<Row<'_>> {
+    pub async fn process_tables<'a>(data: &Value, lines: &Vec<String>, show_cancelled: bool) -> Vec<Row<'a>> {
 
         let mut table_rows: Vec<Row<'_>> = vec![];
 
         if let Some(departures_array) = data.get("departures").and_then(|val| val.as_array()) {
             for element in departures_array {
-                let destination = element.get("direction").unwrap();
-                let line = element.get("line")
-                    .and_then(|val| val.get("name")).unwrap();
+                let line_untrimmed = element.get("line")
+                    .and_then(|val| val.get("name")).unwrap().to_string();
+                let line = line_untrimmed[1..line_untrimmed.len()-1].to_string();
+                // Start by checking if we have to filter by lines
+                if !lines.is_empty() && !lines.contains(&line) {
+                    continue;
+                }
+
+                let destination = element.get("direction").unwrap().to_string();
                 let departure_time = element.get("when").unwrap();
                 let planned_departure_time = element.get("plannedWhen").unwrap();
                 if departure_time.is_null() || planned_departure_time.is_null() {
-                    table_rows.push(Row::new(vec![line.to_string(), destination.to_string(), "CANCELLED".to_string(), "".to_string()]));
+                    if show_cancelled {
+                        table_rows.push(Row::new(vec![line, destination, "CANCELLED".to_string(), "".to_string()]));
+                    }
+                    continue;
                 }
-                else {
-                    let wait_and_delay = process_delay(departure_time, planned_departure_time);
-                    let wait_and_delay_cell = if wait_and_delay.1 == 0 {
-                        Cell::from("(=)").style(Style::new().fg(Color::LightGreen))
-                    } else if wait_and_delay.1 > 0 {
-                        Cell::from(wait_and_delay.1.to_string() + "\"").style(Style::new().fg(Color::Red))
-                    } else {
-                        Cell::from(wait_and_delay.1.to_string() + "\"").style(Style::new().fg(Color::Yellow))
-                    };
-                    table_rows.push(Row::new(vec![
-                        Cell::from(line.to_string()).style(Style::new().bold()),
-                        Cell::from(destination.to_string()),
-                        Cell::from(wait_and_delay.0.to_string() + "\""),
-                        wait_and_delay_cell
-                    ]));
-                }
+                let wait_and_delay = process_delay(departure_time, planned_departure_time);
+                let wait_and_delay_cell = if wait_and_delay.1 == 0 {
+                    Cell::from("(=)").style(Style::new().fg(Color::LightGreen))
+                } else if wait_and_delay.1 > 0 {
+                    Cell::from(wait_and_delay.1.to_string() + "\"").style(Style::new().fg(Color::Red))
+                } else {
+                    Cell::from(wait_and_delay.1.to_string() + "\"").style(Style::new().fg(Color::Yellow))
+                };
+                table_rows.push(Row::new(vec![
+                    Cell::from(line.to_string()).style(Style::new().bold()),
+                    Cell::from(destination),
+                    Cell::from(wait_and_delay.0.to_string() + "\""),
+                    wait_and_delay_cell
+                ]));
             }
         } else {
             table_rows.push(Row::new(vec!["".to_string(), "Can't parse the data, attempting again...".to_string()]));
