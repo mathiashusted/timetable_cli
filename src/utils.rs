@@ -16,7 +16,7 @@ pub mod utils {
     #[derive(Debug, Deserialize)]
     pub struct ConfigStructure {
         pub source: String,
-        pub station_id: i32,
+        pub station_id: Vec<i32>,
         pub duration: i32,
         pub refresh_rate: u64,
         pub lines: Vec<String>,
@@ -130,6 +130,15 @@ pub mod utils {
         };
         let delay = (parsed_departure_time - parsed_planned).num_minutes();
         (difference as i32, delay as i32)
+    }
+
+    pub fn create_url(source: &str, station_id: i32, duration: i32) -> String {
+        return format!(
+            "https://{}/stops/{}/departures?duration={}&linesOfStops=false&remarks=true&language=en",
+            source,
+            station_id,
+            duration
+        );
     }
 
 }
