@@ -52,12 +52,12 @@ pub mod utils {
                 Ok(body) => serde_json::from_str(body.as_str()).unwrap(),
                 Err(err) => {
                     eprintln!("Error Processing the response from the HTTP request: {}", err);
-                    return Value::Null;
+                    return serde_json::from_str("").unwrap();
                 },
             },
             Err(err) => {
                 eprintln!("Error making the HTTP request: {}", err);
-                return Value::Null;
+                return serde_json::from_str("").unwrap();
             }
         }
     }
