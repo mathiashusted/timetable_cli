@@ -1,6 +1,6 @@
 {
     "source": "v6.bvg.transport.rest",
-    "station_id": 900003201,
+    "station_id": [900003201],
     "duration": 60,
     "refresh_rate": 15,
     "lines": [],
