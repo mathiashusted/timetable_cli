@@ -76,7 +76,8 @@ pub mod utils {
                     continue;
                 }
 
-                let destination = element.get("direction").unwrap().to_string();
+                let destination_untrimmed = element.get("direction").unwrap().to_string();
+                let destination = destination_untrimmed[1..destination_untrimmed.len()-1].to_string();
                 let departure_time = element.get("when").unwrap();
                 let planned_departure_time = element.get("plannedWhen").unwrap();
                 if departure_time.is_null() || planned_departure_time.is_null() {
@@ -122,9 +123,13 @@ pub mod utils {
         let parsed_departure_time = NaiveDateTime::parse_from_str(actual_departure.as_str().unwrap(), date_format).unwrap();
         let parsed_time_processed = Local.from_local_datetime(&parsed_departure_time).unwrap();
         let parsed_planned = NaiveDateTime::parse_from_str(planned_departure.as_str().unwrap(), date_format).unwrap();
-        let difference = parsed_time_processed - Local::now();
-        let delay = parsed_departure_time - parsed_planned;
-        (difference.num_minutes() as i32, delay.num_minutes() as i32)
+        let difference = if (parsed_time_processed - Local::now()).num_minutes() > 0 {
+            (parsed_time_processed - Local::now()).num_minutes()
+        } else {
+            0
+        };
+        let delay = (parsed_departure_time - parsed_planned).num_minutes();
+        (difference as i32, delay as i32)
     }
 
 }
