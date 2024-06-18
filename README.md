@@ -6,6 +6,6 @@ the config.json file for a given time period. It can now also filter for specifi
 
 ### How to use
 
-Specify all of the stations in the config.json file that you want to view the departures from. To find the station IDs, please refer to [transport.rest](https://transport.rest/) for now (search function will be implemented later). To start the program, simply execute it via the terminal and use the keyboard shortcuts to navigate:
+Specify all of the stations in the config.json file that you want to view the departures from. To find the station IDs, please refer to the [transport.rest playground](https://petstore.swagger.io/?url=https%3A%2F%2Fv6.bvg.transport.rest%2F.well-known%2Fservice-desc%0A#/default/get_locations) for now (search function will be implemented later). To start the program, simply execute it via the terminal and use the keyboard shortcuts to navigate:
 1. **n** cycles through the stations
 2. **q** quits the program
