@@ -49,11 +49,11 @@ async fn master_loop(config: ConfigStructure) {
             }
             url = utils::utils::create_url(&config.source.to_string(), config.station_id[current_station], config.duration);
             data_refresh_tick = config.refresh_rate;
-            metadata = utils::utils::process_metadata(&data);
         }
 
         if data_refresh_tick == config.refresh_rate {
             data = utils::utils::make_request(url.to_string()).await;
+            metadata = utils::utils::process_metadata(&data);
             data_refresh_tick = 0;
         }
         timetable = utils::utils::process_tables(&data, &config.lines, config.show_cancelled).await;
