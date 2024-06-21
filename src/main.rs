@@ -11,7 +11,7 @@ use utils::utils::ConfigStructure;
 mod utils;
 mod render;
 
-const TICK_RATE: u64 = 50; // Refresh screen every x milliseconds
+const TICK_RATE: u64 = 100; // Refresh screen every x milliseconds
 
 
 async fn master_loop(config: ConfigStructure) {
