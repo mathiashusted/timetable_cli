@@ -45,19 +45,31 @@ pub mod utils {
         Ok(output)
     }
 
+    pub fn trim_string(to_trim: &str) -> String {
+        to_trim[1..to_trim.len()-1].to_string()
+    }
+
     // Our function which actually makes the request, and then returns the parsed JSON keys along with their values
     pub async fn make_request(url: String) -> Value {
         match reqwest::get(url).await {
             Ok(response) => match response.text().await {
-                Ok(body) => serde_json::from_str(body.as_str()).unwrap(),
+                Ok(body) => {
+                    match serde_json::from_str(body.as_str()) {
+                        Ok(json) => json,
+                        Err(err) => {
+                            eprintln!("Error loading the contents of the HTTP request: {}", err);
+                            Value::Null
+                        }
+                    }
+                },
                 Err(err) => {
                     eprintln!("Error Processing the response from the HTTP request: {}", err);
-                    return serde_json::from_str("").unwrap();
+                    return Value::Null;
                 },
             },
             Err(err) => {
                 eprintln!("Error making the HTTP request: {}", err);
-                return serde_json::from_str("").unwrap();
+                return Value::Null;
             }
         }
     }
@@ -70,14 +82,14 @@ pub mod utils {
             for element in departures_array {
                 let line_untrimmed = element.get("line")
                     .and_then(|val| val.get("name")).unwrap().to_string();
-                let line = line_untrimmed[1..line_untrimmed.len()-1].to_string();
+                let line = trim_string(&line_untrimmed);
                 // Start by checking if we have to filter by lines
                 if !lines.is_empty() && !lines.contains(&line) {
                     continue;
                 }
 
                 let destination_untrimmed = element.get("direction").unwrap().to_string();
-                let destination = destination_untrimmed[1..destination_untrimmed.len()-1].to_string();
+                let destination = trim_string(&destination_untrimmed);
                 let departure_time = element.get("when").unwrap();
                 let planned_departure_time = element.get("plannedWhen").unwrap();
                 if departure_time.is_null() || planned_departure_time.is_null() {
@@ -107,12 +119,15 @@ pub mod utils {
         table_rows
     }
 
-    pub fn process_metadata(data: &Value) -> String {
-
-        if let Some(departures_array) = data.get("departures").and_then(|val| val.as_array()) {
-            let stop_name = departures_array[0].get("stop")
-                .and_then(|val| val.get("name")).unwrap();
-            return stop_name.to_string(); // Position 0 in array: Name of the stop
+    pub async fn get_station_name(id: i32, source: &str) -> String {
+        let request_string: String = format!(
+            "https://{}/stops/{}?linesOfStops=false&language=en",
+            source,
+            id
+        );
+        let data = make_request(request_string).await;
+        if let Some(body) = data.get("name") {
+            return trim_string(&body.to_string());
         }
 
         String::from("STATION NAME NOT FOUND") // Default behavior in case name couldn't be found

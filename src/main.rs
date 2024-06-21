@@ -11,10 +11,9 @@ use utils::utils::ConfigStructure;
 mod utils;
 mod render;
 
-const TICK_RATE: u64 = 1000; // Refresh screen every x milliseconds
+const TICK_RATE: u64 = 50; // Refresh screen every x milliseconds
 
 
-//async fn master_loop(data_refresh_rate: u64, station_id: Vec<i32>, lines: Vec<String>, show_cancelled: bool)
 async fn master_loop(config: ConfigStructure) {
     enable_raw_mode().unwrap();
     stdout().execute(EnterAlternateScreen).unwrap();
@@ -28,11 +27,12 @@ async fn master_loop(config: ConfigStructure) {
     let mut terminal = ratatui::Terminal::new(CrosstermBackend::new(stdout())).unwrap();
 
     let mut data_refresh_tick: u64 = 0; // Iterator for when to update data
+    let data_refresh = (1000/TICK_RATE) * config.refresh_rate;
     // Our initial request to fetch the data
     let mut data = utils::utils::make_request(url.to_string()).await;
-    let mut timetable;
-    let mut metadata = utils::utils::process_metadata(&data);
-
+    let mut timetable: Vec<ratatui::widgets::Row>;
+    let mut metadata = utils::utils::get_station_name(config.station_id[0], &config.source).await;
+    
     let mut should_quit = false;
 
     while !should_quit {
@@ -48,12 +48,12 @@ async fn master_loop(config: ConfigStructure) {
                 current_station += 1;
             }
             url = utils::utils::create_url(&config.source.to_string(), config.station_id[current_station], config.duration);
-            data_refresh_tick = config.refresh_rate;
+            data_refresh_tick = data_refresh;
         }
 
-        if data_refresh_tick == config.refresh_rate {
+        if data_refresh_tick == data_refresh {
             data = utils::utils::make_request(url.to_string()).await;
-            metadata = utils::utils::process_metadata(&data);
+            metadata = utils::utils::get_station_name(config.station_id[current_station], &config.source).await;
             data_refresh_tick = 0;
         }
         timetable = utils::utils::process_tables(&data, &config.lines, config.show_cancelled).await;
