@@ -49,11 +49,14 @@ async fn master_loop(config: ConfigStructure) {
             }
             url = utils::utils::create_url(&config.source.to_string(), config.station_id[current_station], config.duration);
             data_refresh_tick = data_refresh;
+            timetable = utils::utils::loading_screen();
+            render::render::draw(&mut terminal, &timetable, &metadata);
+            metadata = utils::utils::get_station_name(config.station_id[current_station], &config.source).await;
+            continue;
         }
 
         if data_refresh_tick == data_refresh {
             data = utils::utils::make_request(url.to_string()).await;
-            metadata = utils::utils::get_station_name(config.station_id[current_station], &config.source).await;
             data_refresh_tick = 0;
         }
         timetable = utils::utils::process_tables(&data, &config.lines, config.show_cancelled).await;

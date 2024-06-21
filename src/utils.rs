@@ -119,6 +119,13 @@ pub mod utils {
         table_rows
     }
 
+    pub fn loading_screen() -> Vec<Row<'static>> {
+        let mut table_rows: Vec<Row<'_>> = vec![];
+        table_rows.push(Row::new(vec!["".to_string(), "Loading the next station...".to_string()]));
+
+        table_rows
+    }
+
     pub async fn get_station_name(id: i32, source: &str) -> String {
         let request_string: String = format!(
             "https://{}/stops/{}?linesOfStops=false&language=en",
