@@ -56,19 +56,19 @@ pub mod utils {
                 Ok(body) => {
                     match serde_json::from_str(body.as_str()) {
                         Ok(json) => json,
-                        Err(err) => {
-                            eprintln!("Error loading the contents of the HTTP request: {}", err);
+                        Err(_) => {
+                            // Error loading the contents of the HTTP request
                             Value::Null
                         }
                     }
                 },
-                Err(err) => {
-                    eprintln!("Error Processing the response from the HTTP request: {}", err);
+                Err(_) => {
+                    // Error Processing the response from the HTTP request
                     return Value::Null;
                 },
             },
-            Err(err) => {
-                eprintln!("Error making the HTTP request: {}", err);
+            Err(_) => {
+                // Error making the HTTP request
                 return Value::Null;
             }
         }
@@ -114,7 +114,7 @@ pub mod utils {
                 ]));
             }
         } else {
-            table_rows.push(Row::new(vec!["".to_string(), "Can't parse the data, attempting again...".to_string()]));
+            table_rows.push(Row::new(vec!["".to_string(), "Can't load the data, attempting again...".to_string()]));
         }
         table_rows
     }

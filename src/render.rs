@@ -34,7 +34,7 @@ pub mod render {
                     .style(Style::new().fg(Color::Magenta))
                     .bottom_margin(1),
             )
-            .highlight_style(Style::new().reversed())
+            .row_highlight_style(Style::new().reversed())
             .highlight_symbol(">>");
         rect.render_widget(table, chunks[1]);
     }
@@ -53,7 +53,7 @@ pub mod render {
                     ]
                     .as_ref()
                 )
-                .split(rect.size());
+                .split(rect.area());
 
             // Start the drawing of the GUI
             gui(rect, &metadata, &chunks);
